@@ -10,6 +10,13 @@
 `lazymc` puts your Minecraft server to rest when idle, and wakes it up when
 players connect.
 
+> **This fork** (branch [`warden`](https://github.com/JosueMeserom/lazymc/tree/warden)) adds two things on top of
+> upstream `master`, used by the [Warden](https://github.com/JosueMeserom/warden) tools:
+> - `public.receive_proxy_v2`: receive the real client IP from a trusted local proxy over a `PROXY` v2 header and
+>   pass it on to the server. See [docs/proxy-ip.md](docs/proxy-ip.md#receiving-the-header-this-fork).
+> - Servers whose MOTD has colors (a status description sent as a text component) are detected as started; upstream
+>   drops that status and keeps holding players.
+
 Some Minecraft servers (especially modded) use an insane amount of resources
 when nobody is playing. lazymc helps by stopping your server when idle, until a
 player connects again.

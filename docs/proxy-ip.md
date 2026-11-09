@@ -46,6 +46,28 @@ Other related properties, you probably won't need to touch, include:
 - `join.forward.send_proxy_v2`: set to `true` to enable `PROXY` header forwarded server, if `forward` join method is used
 - `rcon.send_proxy_v2`: set to `true` to enable `PROXY` header for RCON connections for Minecraft server
 
+## Receiving the header (this fork)
+
+If lazymc itself sits behind another proxy on the same machine (a router that
+picks the server by hostname, for example), lazymc only sees that proxy's
+local address. Set `public.receive_proxy_v2` to `true` and have that proxy send
+a `PROXY` v2 header: lazymc reads it on connections from loopback addresses
+only (the header is optional, so local tools without it keep working) and uses
+the client address it carries for IP bans, logs and the header it sends on to
+the server with `server.send_proxy_v2`, also for held clients.
+
+```toml
+[public]
+receive_proxy_v2 = true
+
+[server]
+send_proxy_v2 = true
+```
+
+Paper supports the header natively (`proxies.proxy-protocol: true` in
+`config/paper-global.yml`); for Fabric, use a mod such as
+[Proxy Protocol Support](https://modrinth.com/mod/proxy-protocol-support).
+
 ## Server plugin
 
 Install one of these plugins as companion on your server to enable support for
