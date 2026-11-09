@@ -21,6 +21,10 @@
 #version = "1.20.3"
 #protocol = 765
 
+# Receive a HAProxy v2 header from proxies on this machine (loopback only), with the real client address.
+# It's optional on each connection. Use it with `send_proxy_v2` to pass the real client IP on to the server.
+#receive_proxy_v2 = false
+
 [server]
 # Server address. Internal IP and port of server started by lazymc to proxy to.
 # Port must be different from public port.

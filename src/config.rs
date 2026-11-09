@@ -143,6 +143,9 @@ pub struct Public {
 
     /// Minecraft protocol version hint.
     pub protocol: u32,
+
+    /// Receive a PROXY v2 header from proxies on this machine (loopback), to know the real client address.
+    pub receive_proxy_v2: bool,
 }
 
 impl Default for Public {
@@ -151,6 +154,7 @@ impl Default for Public {
             address: "0.0.0.0:25565".parse().unwrap(),
             version: proto::PROTO_DEFAULT_VERSION.to_string(),
             protocol: proto::PROTO_DEFAULT_PROTOCOL,
+            receive_proxy_v2: false,
         }
     }
 }

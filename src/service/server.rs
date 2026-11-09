@@ -1,9 +1,11 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use bytes::BytesMut;
 use futures::FutureExt;
 use tokio::net::{TcpListener, TcpStream};
+use tokio::time::timeout;
 
 use crate::config::Config;
 use crate::proto::client::Client;
@@ -12,6 +14,9 @@ use crate::server::{self, Server};
 use crate::service;
 use crate::status;
 use crate::util::error::{quit_error, ErrorHints};
+
+/// How long a trusted local proxy has to send its PROXY header.
+const PROXY_HEADER_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Start lazymc.
 ///
@@ -73,8 +78,13 @@ pub async fn service(config: Arc<Config>) -> Result<(), ()> {
 /// Route inbound TCP stream to correct service, spawning a new task.
 #[inline]
 fn route(inbound: TcpStream, config: Arc<Config>, server: Arc<Server>) {
+    tokio::spawn(route_async(inbound, config, server));
+}
+
+/// Route inbound TCP stream to correct service.
+async fn route_async(mut inbound: TcpStream, config: Arc<Config>, server: Arc<Server>) {
     // Get user peer address
-    let peer = match inbound.peer_addr() {
+    let mut peer = match inbound.peer_addr() {
         Ok(peer) => peer,
         Err(err) => {
             warn!(target: "lazymc", "Connection from unknown peer address, disconnecting: {}", err);
@@ -82,8 +92,19 @@ fn route(inbound: TcpStream, config: Arc<Config>, server: Arc<Server>) {
         }
     };
 
+    // A proxy on this machine may tell us the real client address
+    if config.public.receive_proxy_v2 && peer.ip().to_canonical().is_loopback() {
+        match timeout(PROXY_HEADER_TIMEOUT, proxy::receive_proxy_header(&mut inbound)).await {
+            Ok(Ok(real)) => peer = real,
+            _ => {
+                debug!(target: "lazymc", "No valid proxy header from {} in time, disconnecting", peer);
+                return;
+            }
+        }
+    }
+
     // Check ban state, just drop connection if enabled
-    let banned = server.is_banned_ip_blocking(&peer.ip());
+    let banned = server.is_banned_ip(&peer.ip()).await;
     if banned && config.server.drop_banned_ips {
         info!(target: "lazymc", "Connection from banned IP {}, dropping", peer.ip());
         return;
